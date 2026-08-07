@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------- Light mode defaults ---------- */
+:root {
+  --color-surface: #f8fafc;
+  --color-surface-alt: #ffffff;
+
+  /* Sidebar/topbar get a light TINT of the accent color */
+  --color-chrome-bg: color-mix(in srgb, var(--color-primary) 10%, white);
+  --color-chrome-border: color-mix(in srgb, var(--color-primary) 22%, white);
+  --color-chrome-active: color-mix(in srgb, var(--color-primary) 20%, white);
+  --color-chrome-hover: color-mix(in srgb, var(--color-primary) 12%, white);
+  --color-chrome-text: color-mix(in srgb, var(--color-primary) 60%, #1f2937);
+  --color-chrome-text-muted: color-mix(in srgb, var(--color-primary) 30%, #4b5563);
+}
+
+/* ---------- Dark mode overrides ---------- */
+.dark {
+  --color-surface: #0f1117;
+  --color-surface-alt: #1a1d27;
+
+  /* Sidebar/topbar get a dark SHADE of the accent color */
+  --color-chrome-bg: color-mix(in srgb, var(--color-primary) 22%, #0b0c10);
+  --color-chrome-border: color-mix(in srgb, var(--color-primary) 35%, #0b0c10);
+  --color-chrome-active: color-mix(in srgb, var(--color-primary) 45%, #0b0c10);
+  --color-chrome-hover: color-mix(in srgb, var(--color-primary) 30%, #0b0c10);
+  --color-chrome-text: color-mix(in srgb, var(--color-primary) 35%, white);
+  --color-chrome-text-muted: color-mix(in srgb, var(--color-primary) 15%, #d1d5db);
+}
+
+/* ---------- Preset accent color palettes ----------
+   Applied by ThemeProvider via a data-accent attribute on <html>.
+   Each defines a base / hover / light shade. */
+[data-accent='red'] {
+  --color-primary: #ef4444;
+  --color-primary-hover: #dc2626;
+  --color-primary-light: #fee2e2;
+}
+[data-accent='blue'] {
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-primary-light: #dbeafe;
+}
+[data-accent='green'] {
+  --color-primary: #22c55e;
+  --color-primary-hover: #16a34a;
+  --color-primary-light: #dcfce7;
+}
+[data-accent='purple'] {
+  --color-primary: #a855f7;
+  --color-primary-hover: #9333ea;
+  --color-primary-light: #f3e8ff;
+}
+[data-accent='orange'] {
+  --color-primary: #f97316;
+  --color-primary-hover: #ea580c;
+  --color-primary-light: #ffedd5;
+}
+[data-accent='yellow'] {
+  --color-primary: #eab308;
+  --color-primary-hover: #ca8a04;
+  --color-primary-light: #fef9c3;
+}
+
+body {
+  background-color: var(--color-surface);
+}
