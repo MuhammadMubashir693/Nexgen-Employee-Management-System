@@ -29,6 +29,10 @@ export interface Department {
   manager_id: number | null
 }
 
+export interface EmployeeWithDepartment extends Employee {
+  department: Pick<Department, 'department_id' | 'name'> | null
+}
+
 export interface UserPreferences {
   employee_id: number
   theme_mode: 'light' | 'dark'
