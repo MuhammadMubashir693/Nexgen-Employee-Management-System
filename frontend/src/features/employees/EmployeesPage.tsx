@@ -1,6 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useAuth } from '@/auth/AuthProvider'
-import { useEmployees, useDeactivateEmployee, useReactivateEmployee } from '@/lib/queries/useEmployees'
+import {
+  useEmployees,
+  useDeactivateEmployee,
+  useReactivateEmployee,
+  useDeleteEmployee,
+} from '@/lib/queries/useEmployees'
 import { useDepartments } from '@/lib/queries/useDepartments'
 import { Badge } from '@/components/ui/Badge'
 import { EmployeeFormModal } from './EmployeeFormModal'
@@ -14,15 +19,18 @@ export function EmployeesPage() {
   const { data: departments } = useDepartments()
   const deactivate = useDeactivateEmployee()
   const reactivate = useReactivateEmployee()
+  const deleteEmp = useDeleteEmployee()
 
   const [search, setSearch] = useState('')
   const [departmentFilter, setDepartmentFilter] = useState<string>('all')
   const [roleFilter, setRoleFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [genderFilter, setGenderFilter] = useState<string>('all')
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<EmployeeWithDepartment | null>(null)
   const [confirmDeactivate, setConfirmDeactivate] = useState<EmployeeWithDepartment | null>(null)
   const [confirmReactivate, setConfirmReactivate] = useState<EmployeeWithDepartment | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<EmployeeWithDepartment | null>(null)
 
   const filtered = useMemo(() => {
     if (!employees) return []
@@ -34,9 +42,10 @@ export function EmployeesPage() {
         departmentFilter === 'all' || String(e.department_id) === departmentFilter
       const matchesRole = roleFilter === 'all' || e.role === roleFilter
       const matchesStatus = statusFilter === 'all' || e.status === statusFilter
-      return matchesSearch && matchesDept && matchesRole && matchesStatus
+      const matchesGender = genderFilter === 'all' || e.gender === genderFilter
+      return matchesSearch && matchesDept && matchesRole && matchesStatus && matchesGender
     })
-  }, [employees, search, departmentFilter, roleFilter, statusFilter])
+  }, [employees, search, departmentFilter, roleFilter, statusFilter, genderFilter])
 
   function openAdd() {
     setEditing(null)
@@ -98,6 +107,16 @@ export function EmployeesPage() {
             <option value="on_leave">🌴 On Leave</option>
             <option value="terminated">⛔ Terminated</option>
           </select>
+
+          <select
+            value={genderFilter}
+            onChange={(e) => setGenderFilter(e.target.value)}
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+          >
+            <option value="all">All Genders</option>
+            <option value="M">👨</option>
+            <option value="F">👩</option>
+          </select>
         </div>
 
         {/* Add Employee button only rendered for admin — not just disabled */}
@@ -116,6 +135,7 @@ export function EmployeesPage() {
           <thead className="bg-gray-50 text-left text-gray-500 dark:bg-gray-900/50">
             <tr>
               <th className="px-4 py-3 font-medium">Name</th>
+              <th className="px-4 py-3 font-medium">Gender</th>
               <th className="px-4 py-3 font-medium">Department</th>
               <th className="px-4 py-3 font-medium">Job Title</th>
               <th className="px-4 py-3 font-medium">Role</th>
@@ -127,7 +147,7 @@ export function EmployeesPage() {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                   ⏳ Loading employees…
                 </td>
               </tr>
@@ -135,7 +155,7 @@ export function EmployeesPage() {
 
             {!isLoading && filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                   🕵️ No employees match your filters.
                 </td>
               </tr>
@@ -152,6 +172,7 @@ export function EmployeesPage() {
                   </div>
                   <div className="text-xs text-gray-400">{emp.email}</div>
                 </td>
+                <td className="px-4 py-3">{emp.gender ?? '—'}</td>
                 <td className="px-4 py-3">{emp.department?.name ?? '—'}</td>
                 <td className="px-4 py-3">{emp.job_title ?? '—'}</td>
                 <td className="px-4 py-3">
@@ -164,7 +185,6 @@ export function EmployeesPage() {
                 {isAdmin && (
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
-                      {/* Edit */}
                       <button
                         onClick={() => openEdit(emp)}
                         title="Edit"
@@ -172,9 +192,7 @@ export function EmployeesPage() {
                       >
                         ✏️
                       </button>
-
-                      {/* Deactivate any non-terminated employee */}
-                      {emp.status !== 'terminated' && emp.role !== 'admin' && (
+                      {emp.status !== 'terminated' ? (
                         <button
                           onClick={() => setConfirmDeactivate(emp)}
                           title="Deactivate"
@@ -182,17 +200,23 @@ export function EmployeesPage() {
                         >
                           🗑️
                         </button>
-                      )}
-
-                      {/* Reactivate terminated employee */}
-                      {emp.status === 'terminated' && (
-                        <button
-                          onClick={() => setConfirmReactivate(emp)}
-                          title="Reactivate"
-                          className="rounded-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800"
-                        >
-                          ♻️
-                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => setConfirmReactivate(emp)}
+                            title="Reactivate"
+                            className="rounded-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          >
+                            ♻️
+                          </button>
+                          <button
+                            onClick={() => setConfirmDelete(emp)}
+                            title="Delete Permanently"
+                            className="rounded-lg p-1.5 hover:bg-red-50 text-red-500 dark:hover:bg-red-950/30"
+                          >
+                            ❌
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -265,6 +289,36 @@ export function EmployeesPage() {
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
               >
                 {reactivate.isPending ? '⏳ Working…' : '♻️ Reactivate'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isAdmin && confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-surface-alt p-6 shadow-xl dark:border-gray-800">
+            <h3 className="mb-2 text-lg font-semibold text-red-600 dark:text-red-400">🔥 Permanent Delete Employee?</h3>
+            <p className="mb-4 text-sm text-gray-500">
+              Are you sure you want to permanently delete <strong>{confirmDelete.first_name} {confirmDelete.last_name}</strong>?
+              This action <strong>cannot be undone</strong> and will erase all data associated with this employee.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="rounded-lg px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  await deleteEmp.mutateAsync(confirmDelete.employee_id)
+                  setConfirmDelete(null)
+                }}
+                disabled={deleteEmp.isPending}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteEmp.isPending ? '⏳ Deleting…' : '🔥 Permanent Delete'}
               </button>
             </div>
           </div>

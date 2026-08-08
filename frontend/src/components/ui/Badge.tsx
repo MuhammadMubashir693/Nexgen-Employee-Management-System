@@ -8,6 +8,9 @@ const STYLES: Record<string, string> = {
   admin: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   manager: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   employee: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  on_hold: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 }
 
 const EMOJI: Record<string, string> = {
@@ -20,6 +23,9 @@ const EMOJI: Record<string, string> = {
   admin: '👑',
   manager: '🧭',
   employee: '🙂',
+  on_hold: '⏸️',
+  completed: '🏁',
+  cancelled: '🚫',
 }
 
 export function Badge({ value }: { value: string }) {

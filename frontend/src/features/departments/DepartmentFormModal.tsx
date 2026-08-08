@@ -10,7 +10,10 @@ import type { Department } from '@/types/database.types'
 const schema = z.object({
   name: z.string().min(2, 'Department name must be at least 2 characters'),
   location: z.string().min(1, 'Location is required'),
-  manager_id: z.coerce.number().optional(),
+  manager_id: z.preprocess(
+    (val) => (val === '' || val === undefined || val === null || val === '0' || Number.isNaN(Number(val)) ? null : Number(val)),
+    z.number().nullable().optional()
+  ),
 })
 type FormValues = z.infer<typeof schema>
 
@@ -24,7 +27,7 @@ export function DepartmentFormModal({
   editing: Department | null
 }) {
   const { data: employees } = useEmployees()
-  const managers = employees?.filter((e) => e.role === 'manager' || e.role === 'admin') ?? []
+  const managers = employees?.filter((e) => e.role === 'manager' && e.status !== 'terminated') ?? []
 
   const createDept = useCreateDepartment()
   const updateDept = useUpdateDepartment()
@@ -47,19 +50,24 @@ export function DepartmentFormModal({
     if (open) {
       reset(
         editing
-          ? { name: editing.name, location: editing.location ?? '', manager_id: editing.manager_id ?? undefined }
-          : { name: '', location: '', manager_id: undefined }
+          ? { name: editing.name, location: editing.location ?? '', manager_id: editing.manager_id ?? null }
+          : { name: '', location: '', manager_id: null }
       )
     }
   }, [open, editing, reset])
 
   async function onSubmit(values: FormValues) {
     setServerError(null)
+    const payload = {
+      name: values.name,
+      location: values.location,
+      manager_id: values.manager_id ?? null,
+    }
     try {
       if (editing) {
-        await updateDept.mutateAsync({ department_id: editing.department_id, ...values })
+        await updateDept.mutateAsync({ department_id: editing.department_id, ...payload })
       } else {
-        await createDept.mutateAsync(values)
+        await createDept.mutateAsync(payload)
       }
       reset()
       onClose()

@@ -29,6 +29,34 @@ export interface Department {
   manager_id: number | null
 }
 
+export interface Project {
+  project_id: number
+  department_id: number | null
+  manager_id: number | null
+  project_name: string
+  start_date: string | null
+  end_date: string | null
+  budget: number | null
+  status: 'active' | 'completed' | 'on_hold' | 'cancelled'
+}
+
+export interface Assignment {
+  employee_id: number
+  project_id: number
+  assigned_role: string | null
+  assigned_at: string
+}
+
+export interface ProjectWithRelations extends Project {
+  department: Pick<Department, 'department_id' | 'name'> | null
+  manager: Pick<Employee, 'employee_id' | 'first_name' | 'last_name'> | null
+  assignments: Array<
+    Pick<Assignment, 'employee_id' | 'assigned_role'> & {
+      employee: Pick<Employee, 'employee_id' | 'first_name' | 'last_name'>
+    }
+  >
+}
+
 export interface EmployeeWithDepartment extends Employee {
   department: Pick<Department, 'department_id' | 'name'> | null
 }
@@ -39,18 +67,51 @@ export interface UserPreferences {
   accent_color: AccentColor
 }
 
-// Minimal shape so the Supabase client generic compiles.
-// Extend with the rest of the tables as we build each feature.
 export interface Database {
   public: {
     Tables: {
-      employee: { Row: Employee; Insert: Partial<Employee>; Update: Partial<Employee> }
-      department: { Row: Department; Insert: Partial<Department>; Update: Partial<Department> }
+      employee: {
+        Row: Employee
+        Insert: Partial<Employee>
+        Update: Partial<Employee>
+        Relationships: []
+      }
+      department: {
+        Row: Department
+        Insert: Partial<Department>
+        Update: Partial<Department>
+        Relationships: []
+      }
+      project: {
+        Row: Project
+        Insert: Partial<Project>
+        Update: Partial<Project>
+        Relationships: []
+      }
+      assignment: {
+        Row: Assignment
+        Insert: Partial<Assignment>
+        Update: Partial<Assignment>
+        Relationships: []
+      }
       user_preferences: {
         Row: UserPreferences
         Insert: Partial<UserPreferences>
         Update: Partial<UserPreferences>
+        Relationships: []
       }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }

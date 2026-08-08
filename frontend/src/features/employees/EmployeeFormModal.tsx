@@ -15,8 +15,11 @@ const baseSchema = {
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
   email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
-  gender: z.enum(['M', 'F']).optional(),
-  department_id: z.coerce.number().optional(),
+  gender: z.enum(['M', 'F']).optional().nullable(),
+  department_id: z.preprocess(
+    (val) => (val === '' || val === undefined || val === null || val === '0' || Number.isNaN(Number(val)) ? null : Number(val)),
+    z.number().nullable().optional()
+  ),
   job_title: z.string().min(1, 'Job title is required'),
   hire_date: z.string().min(1, 'Hire date is required'),
   role: z.enum(['admin', 'manager', 'employee']),
@@ -56,12 +59,22 @@ export function EmployeeFormModal({
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isValid },
     reset,
   } = useForm<CreateForm | EditForm>({
     resolver: zodResolver(schema),
     mode: 'onChange',
   })
+
+  const selectedRole = watch('role')
+
+  useEffect(() => {
+    if (selectedRole === 'admin') {
+      setValue('department_id', null)
+    }
+  }, [selectedRole, setValue])
 
   // Re-populate whenever a different employee is opened for edit, or the
   // modal re-opens fresh for "Add" — defaultValues alone won't do this
@@ -75,7 +88,7 @@ export function EmployeeFormModal({
               last_name: editing.last_name,
               email: editing.email,
               gender: editing.gender ?? undefined,
-              department_id: editing.department_id ?? undefined,
+              department_id: editing.role === 'admin' ? null : (editing.department_id ?? null),
               job_title: editing.job_title ?? '',
               hire_date: editing.hire_date,
               role: editing.role,
@@ -87,6 +100,7 @@ export function EmployeeFormModal({
               job_title: '',
               hire_date: '',
               role: 'employee',
+              department_id: null,
               password: '',
             } as CreateForm)
       )
@@ -95,20 +109,27 @@ export function EmployeeFormModal({
 
   async function onSubmit(values: CreateForm | EditForm) {
     setServerError(null)
+    const payload = {
+      first_name: values.first_name,
+      last_name: values.last_name,
+      email: values.email,
+      gender: values.gender ?? null,
+      department_id: values.role === 'admin' ? null : (values.department_id ?? null),
+      job_title: values.job_title,
+      hire_date: values.hire_date,
+      role: values.role,
+    }
     try {
       if (isEdit && editing) {
         await updateEmployee.mutateAsync({
           employee_id: editing.employee_id,
-          first_name: values.first_name,
-          last_name: values.last_name,
-          email: values.email,
-          department_id: values.department_id ?? null,
-          job_title: values.job_title,
-          hire_date: values.hire_date,
-          role: values.role,
+          ...payload,
         })
       } else {
-        await createEmployee.mutateAsync(values as CreateEmployeeInput)
+        await createEmployee.mutateAsync({
+          ...(values as CreateEmployeeInput),
+          ...payload,
+        })
       }
       reset()
       onClose()
@@ -183,7 +204,11 @@ export function EmployeeFormModal({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1 block text-sm font-medium">🏢 Department</label>
-            <select {...register('department_id')} className={inputClass(false)}>
+            <select
+              {...register('department_id')}
+              disabled={selectedRole === 'admin'}
+              className={`${inputClass(false)} ${selectedRole === 'admin' ? 'bg-gray-100 dark:bg-gray-800 opacity-60 cursor-not-allowed' : ''}`}
+            >
               <option value="">— None —</option>
               {departments?.map((d) => (
                 <option key={d.department_id} value={d.department_id}>
@@ -191,6 +216,9 @@ export function EmployeeFormModal({
                 </option>
               ))}
             </select>
+            {selectedRole === 'admin' && (
+              <p className="mt-1 text-xs text-gray-400">Admins do not belong to departments.</p>
+            )}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">🧭 Role</label>
@@ -200,6 +228,18 @@ export function EmployeeFormModal({
               <option value="admin">Admin</option>
             </select>
           </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">⚧ Gender</label>
+          <select {...register('gender')} className={inputClass(!!errors.gender)}>
+            <option value="">— Unspecified —</option>
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+          </select>
+          {errors.gender && (
+            <p className="mt-1 text-xs text-red-500">{errors.gender.message}</p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">

@@ -44,13 +44,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession)
-      if (newSession?.user) {
-        setLoading(true)
-        loadEmployee(newSession.user.id).finally(() => setLoading(false))
-      } else {
-        setEmployee(null)
-      }
+      // Supabase fires onAuthStateChange (e.g. TOKEN_REFRESHED) whenever the
+      // tab regains focus/visibility, not just on real sign-in/sign-out. If
+      // we flip `loading` back to true here, ProtectedRoute unmounts the
+      // whole page (including any in-progress form) every time the admin
+      // switches tabs and back. Only show the full-page loader for an
+      // actual identity change; otherwise just refresh state quietly.
+      setSession((prevSession) => {
+        const userChanged = prevSession?.user?.id !== newSession?.user?.id
+        if (!newSession?.user) {
+          setEmployee(null)
+        } else if (userChanged) {
+          setLoading(true)
+          loadEmployee(newSession.user.id).finally(() => setLoading(false))
+        } else {
+          // Same user — refresh employee data in background if needed without unmounting UI
+          loadEmployee(newSession.user.id)
+        }
+        return newSession
+      })
     })
 
     return () => listener.subscription.unsubscribe()
