@@ -1,8 +1,8 @@
 const STYLES: Record<string, string> = {
   active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  on_leave: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  on_leave: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   terminated: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   approved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   admin: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
@@ -11,6 +11,19 @@ const STYLES: Record<string, string> = {
   on_hold: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
   completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  // Attendance
+  present: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  absent: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  late: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  half_day: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400',
+  // Leaves
+  sick: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
+  casual: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
+  annual: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  unpaid: 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  // Payroll
+  paid: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  failed: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
 }
 
 const EMOJI: Record<string, string> = {
@@ -26,16 +39,27 @@ const EMOJI: Record<string, string> = {
   on_hold: '⏸️',
   completed: '🏁',
   cancelled: '🚫',
+  present: '🟢',
+  absent: '🔴',
+  late: '⏰',
+  half_day: '🌓',
+  sick: '🤒',
+  casual: '🏖️',
+  annual: '📅',
+  unpaid: '💸',
+  paid: '💵',
+  failed: '⚠️',
 }
 
 export function Badge({ value }: { value: string }) {
+  const normalized = value.toLowerCase()
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-        STYLES[value] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+        STYLES[normalized] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
       }`}
     >
-      {EMOJI[value] && <span>{EMOJI[value]}</span>}
+      {EMOJI[normalized] && <span>{EMOJI[normalized]}</span>}
       {value.replace('_', ' ')}
     </span>
   )
