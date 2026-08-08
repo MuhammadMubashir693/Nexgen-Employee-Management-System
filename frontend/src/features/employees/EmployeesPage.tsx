@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useAuth } from '@/auth/AuthProvider'
-import { useEmployees, useDeactivateEmployee } from '@/lib/queries/useEmployees'
+import { useEmployees, useDeactivateEmployee, useReactivateEmployee } from '@/lib/queries/useEmployees'
 import { useDepartments } from '@/lib/queries/useDepartments'
 import { Badge } from '@/components/ui/Badge'
 import { EmployeeFormModal } from './EmployeeFormModal'
@@ -13,6 +13,7 @@ export function EmployeesPage() {
   const { data: employees, isLoading } = useEmployees()
   const { data: departments } = useDepartments()
   const deactivate = useDeactivateEmployee()
+  const reactivate = useReactivateEmployee()
 
   const [search, setSearch] = useState('')
   const [departmentFilter, setDepartmentFilter] = useState<string>('all')
@@ -21,6 +22,7 @@ export function EmployeesPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<EmployeeWithDepartment | null>(null)
   const [confirmDeactivate, setConfirmDeactivate] = useState<EmployeeWithDepartment | null>(null)
+  const [confirmReactivate, setConfirmReactivate] = useState<EmployeeWithDepartment | null>(null)
 
   const filtered = useMemo(() => {
     if (!employees) return []
@@ -162,6 +164,7 @@ export function EmployeesPage() {
                 {isAdmin && (
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
+                      {/* Edit */}
                       <button
                         onClick={() => openEdit(emp)}
                         title="Edit"
@@ -169,13 +172,26 @@ export function EmployeesPage() {
                       >
                         ✏️
                       </button>
-                      {emp.status !== 'terminated' && emp.role === 'manager' && (
+
+                      {/* Deactivate any non-terminated employee */}
+                      {emp.status !== 'terminated' && emp.role !== 'admin' && (
                         <button
                           onClick={() => setConfirmDeactivate(emp)}
                           title="Deactivate"
                           className="rounded-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800"
                         >
                           🗑️
+                        </button>
+                      )}
+
+                      {/* Reactivate terminated employee */}
+                      {emp.status === 'terminated' && (
+                        <button
+                          onClick={() => setConfirmReactivate(emp)}
+                          title="Reactivate"
+                          className="rounded-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        >
+                          ♻️
                         </button>
                       )}
                     </div>
@@ -219,6 +235,36 @@ export function EmployeesPage() {
                 className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
               >
                 {deactivate.isPending ? '⏳ Working…' : '🗑️ Deactivate'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isAdmin && confirmReactivate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-surface-alt p-6 shadow-xl dark:border-gray-800">
+            <h3 className="mb-2 text-lg font-semibold">♻️ Reactivate Employee?</h3>
+            <p className="mb-4 text-sm text-gray-500">
+              This will mark <strong>{confirmReactivate.first_name} {confirmReactivate.last_name}</strong> as
+              active again and restore their login access.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmReactivate(null)}
+                className="rounded-lg px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  await reactivate.mutateAsync(confirmReactivate.employee_id)
+                  setConfirmReactivate(null)
+                }}
+                disabled={reactivate.isPending}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
+              >
+                {reactivate.isPending ? '⏳ Working…' : '♻️ Reactivate'}
               </button>
             </div>
           </div>
