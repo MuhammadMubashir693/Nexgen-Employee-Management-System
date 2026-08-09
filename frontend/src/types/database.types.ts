@@ -75,7 +75,7 @@ export interface Payroll {
   gross_pay: number
   net_pay: number
   pay_date: string | null
-  payment_status: 'pending' | 'paid' | 'failed'
+  payment_status: 'pending' | 'paid'
 }
 
 export interface AuditLog {

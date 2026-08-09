@@ -26,7 +26,6 @@ const STYLES: Record<string, string> = {
   unpaid: 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
   // Payroll
   paid: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  failed: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
 }
 
 const EMOJI: Record<string, string> = {
@@ -54,7 +53,6 @@ const EMOJI: Record<string, string> = {
   annual: '📅',
   unpaid: '💸',
   paid: '💵',
-  failed: '⚠️',
 }
 
 export function Badge({ value }: { value: string }) {

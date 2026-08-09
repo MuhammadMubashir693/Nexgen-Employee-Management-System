@@ -128,6 +128,7 @@ export function PayrollPage() {
       employee_id: genTargetType === 'employee' ? Number(genEmpId) : null,
       gross_pay: parseFloat(grossPay),
       net_pay: calculatedNetPay,
+      deduction_percent: parseFloat(deductionPercent) || 0,
       pay_date: payDate,
       payment_status: paymentStatus,
     })
@@ -208,7 +209,6 @@ export function PayrollPage() {
             <option value="all">All Payment Statuses</option>
             <option value="pending">⏳ Pending</option>
             <option value="paid">💵 Paid</option>
-            <option value="failed">⚠️ Failed</option>
           </select>
         </div>
       </div>

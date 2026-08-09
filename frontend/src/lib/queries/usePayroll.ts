@@ -61,8 +61,9 @@ export interface GeneratePayrollInput {
   period_end: string
   gross_pay: number
   net_pay: number
+  deduction_percent?: number
   pay_date?: string
-  payment_status?: 'pending' | 'paid' | 'failed'
+  payment_status?: 'pending' | 'paid'
 }
 
 export function useGeneratePayroll() {
@@ -80,7 +81,9 @@ export function useGeneratePayroll() {
             department_id: input.department_id,
             employee_id: input.employee_id,
             gross_pay: input.gross_pay,
+            deduction_percent: input.deduction_percent ?? 0,
             pay_date: input.pay_date,
+            payment_status: input.payment_status ?? 'pending',
           },
           headers: { Authorization: `Bearer ${token}` },
         })
