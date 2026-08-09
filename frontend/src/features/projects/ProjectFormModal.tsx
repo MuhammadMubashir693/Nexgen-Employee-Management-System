@@ -1,7 +1,7 @@
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { useAuth } from '@/auth/AuthProvider'
 import { useDepartments } from '@/lib/queries/useDepartments'
@@ -45,7 +45,6 @@ export function ProjectFormModal({
 
   const { data: departments } = useDepartments()
   const { data: employees } = useEmployees()
-  const managers = employees?.filter((e) => e.role === 'manager' && e.status !== 'terminated') ?? []
 
   const createProject = useCreateProject()
   const updateProject = useUpdateProject()
@@ -54,6 +53,8 @@ export function ProjectFormModal({
   const {
     register,
     handleSubmit,
+    control,
+    setValue,
     formState: { errors, isValid },
     reset,
   } = useForm<FormValues>({
@@ -61,32 +62,67 @@ export function ProjectFormModal({
     mode: 'onChange',
   })
 
+  const watchedDepartmentId = useWatch({ control, name: 'department_id' })
+  // register('department_id') gives the raw <select> value as a string;
+  // coerce it before comparing against employee.department_id (a number).
+  const watchedDepartmentIdNum =
+    watchedDepartmentId == null ? null : Number(watchedDepartmentId)
+
+  // Only non-terminated managers from the selected department can be
+  // picked as the project manager. Employees, admins, and managers from
+  // other departments are never selectable.
+  const eligibleManagers = useMemo(() => {
+    if (!employees || !watchedDepartmentIdNum) return []
+
+    return employees.filter(
+      (e) =>
+        e.status !== 'terminated' &&
+        e.role === 'manager' &&
+        e.department_id === watchedDepartmentIdNum
+    )
+  }, [employees, watchedDepartmentIdNum])
+
+  // Tracks the department the manager_id field was last valid for, so we
+  // only clear the selection when the department *changes* — not on the
+  // initial populate/reset when the modal opens.
+  const lastSyncedDeptRef = useRef<number | null | undefined>(undefined)
+  useEffect(() => {
+    if (
+      lastSyncedDeptRef.current !== undefined &&
+      lastSyncedDeptRef.current !== watchedDepartmentIdNum
+    ) {
+      setValue('manager_id', null, { shouldValidate: true })
+    }
+    lastSyncedDeptRef.current = watchedDepartmentIdNum
+  }, [watchedDepartmentIdNum, setValue])
+
   // Re-populate whenever a different project opens for edit, or the modal
   // re-opens fresh for "Add" — modal stays mounted between opens.
   useEffect(() => {
     if (open) {
-      reset(
-        editing
-          ? {
-              project_name: editing.project_name,
-              department_id: editing.department_id ?? null,
-              manager_id: editing.manager_id ?? null,
-              start_date: editing.start_date ?? '',
-              end_date: editing.end_date ?? '',
-              budget: editing.budget ?? undefined,
-              status: editing.status,
-            }
-          : {
-              project_name: '',
-              // Managers can only create projects in their own department.
-              department_id: isAdmin ? null : employee?.department_id ?? null,
-              manager_id: isAdmin ? null : employee?.employee_id ?? null,
-              start_date: '',
-              end_date: '',
-              budget: undefined,
-              status: 'active',
-            }
-      )
+      const initial = editing
+        ? {
+          project_name: editing.project_name,
+          department_id: editing.department_id ?? null,
+          manager_id: editing.manager_id ?? null,
+          start_date: editing.start_date ?? '',
+          end_date: editing.end_date ?? '',
+          budget: editing.budget ?? undefined,
+          status: editing.status,
+        }
+        : {
+          project_name: '',
+          // Managers can only create projects in their own department.
+          department_id: isAdmin ? null : employee?.department_id ?? null,
+          manager_id: isAdmin ? null : employee?.employee_id ?? null,
+          start_date: '',
+          end_date: '',
+          budget: undefined,
+          status: 'active' as const,
+        }
+      reset(initial)
+      // Sync so the manager-clearing effect doesn't fire from this reset.
+      lastSyncedDeptRef.current = initial.department_id ?? null
     }
   }, [open, editing, reset, isAdmin, employee])
 
@@ -117,11 +153,10 @@ export function ProjectFormModal({
   const busy = createProject.isPending || updateProject.isPending
 
   function inputClass(hasError: boolean) {
-    return `w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
-      hasError
-        ? 'border-red-400 bg-red-50 text-gray-400 dark:bg-red-950/30'
-        : 'border-gray-300 bg-white focus:border-primary dark:border-gray-700 dark:bg-gray-900'
-    }`
+    return `w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${hasError
+      ? 'border-red-400 bg-red-50 text-gray-400 dark:bg-red-950/30'
+      : 'border-gray-300 bg-white focus:border-primary dark:border-gray-700 dark:bg-gray-900'
+      }`
   }
 
   return (
@@ -153,14 +188,25 @@ export function ProjectFormModal({
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">🧭 Project Manager</label>
-            <select {...register('manager_id')} className={inputClass(false)}>
-              <option value="">— None —</option>
-              {managers.map((m) => (
+            <select
+              {...register('manager_id')}
+              disabled={!watchedDepartmentIdNum}
+              className={`${inputClass(false)} disabled:cursor-not-allowed disabled:opacity-60`}
+            >
+              <option value="">
+                {watchedDepartmentIdNum ? '— Select manager —' : '— Select department first —'}
+              </option>
+              {eligibleManagers.map((m) => (
                 <option key={m.employee_id} value={m.employee_id}>
                   {m.first_name} {m.last_name}
                 </option>
               ))}
             </select>
+            {watchedDepartmentIdNum && eligibleManagers.length === 0 && (
+              <p className="mt-1 text-xs text-gray-400">
+                No eligible managers in this department yet.
+              </p>
+            )}
           </div>
         </div>
 

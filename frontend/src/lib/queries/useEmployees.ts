@@ -176,6 +176,31 @@ export function useReactivateEmployee() {
   })
 }
 
+// Sets a new password for an employee's login. Goes through an Edge
+// Function since changing another user's password needs the service role
+// key — admin-only, enforced server-side too.
+export function useAdminSetPassword() {
+  return useMutation({
+    mutationFn: async ({
+      employee_id,
+      new_password,
+    }: {
+      employee_id: number
+      new_password: string
+    }) => {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      const { data, error } = await supabase.functions.invoke('admin-set-password', {
+        body: { employee_id, new_password },
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (error) throw error
+      if (data?.error) throw new Error(data.error)
+      return data
+    },
+  })
+}
+
 // Permanently deletes an employee record (and unlinks all foreign key references)
 export function useDeleteEmployee() {
   const queryClient = useQueryClient()

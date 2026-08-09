@@ -9,6 +9,7 @@ import {
 import { useDepartments } from '@/lib/queries/useDepartments'
 import { Badge } from '@/components/ui/Badge'
 import { EmployeeFormModal } from './EmployeeFormModal'
+import { ChangePasswordModal } from './ChangePasswordModal'
 import type { EmployeeWithDepartment } from '@/types/database.types'
 
 export function EmployeesPage() {
@@ -31,6 +32,7 @@ export function EmployeesPage() {
   const [confirmDeactivate, setConfirmDeactivate] = useState<EmployeeWithDepartment | null>(null)
   const [confirmReactivate, setConfirmReactivate] = useState<EmployeeWithDepartment | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<EmployeeWithDepartment | null>(null)
+  const [passwordTarget, setPasswordTarget] = useState<EmployeeWithDepartment | null>(null)
 
   const filtered = useMemo(() => {
     if (!employees) return []
@@ -192,6 +194,13 @@ export function EmployeesPage() {
                       >
                         ✏️
                       </button>
+                      <button
+                        onClick={() => setPasswordTarget(emp)}
+                        title="Change Password"
+                        className="rounded-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      >
+                        🔑
+                      </button>
                       {emp.status !== 'terminated' ? (
                         <button
                           onClick={() => setConfirmDeactivate(emp)}
@@ -232,6 +241,14 @@ export function EmployeesPage() {
           open={modalOpen}
           onClose={() => setModalOpen(false)}
           editing={editing}
+        />
+      )}
+
+      {isAdmin && (
+        <ChangePasswordModal
+          open={!!passwordTarget}
+          onClose={() => setPasswordTarget(null)}
+          employee={passwordTarget}
         />
       )}
 

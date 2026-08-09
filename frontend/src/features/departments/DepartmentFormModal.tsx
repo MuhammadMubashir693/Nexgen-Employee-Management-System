@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { useEmployees } from '@/lib/queries/useEmployees'
 import { useCreateDepartment, useUpdateDepartment } from '@/lib/queries/useDepartmentMutations'
@@ -27,7 +27,21 @@ export function DepartmentFormModal({
   editing: Department | null
 }) {
   const { data: employees } = useEmployees()
-  const managers = employees?.filter((e) => e.role === 'manager' && e.status !== 'terminated') ?? []
+
+  // Scoped the same way as the project manager picker: only people who
+  // already belong to this department, plus anyone unassigned (since
+  // picking them as manager will move them into this department via the
+  // manager/department sync). When creating a brand-new department there's
+  // no one in it yet, so show every eligible candidate.
+  const eligibleManagers = useMemo(() => {
+    if (!employees) return []
+    return employees.filter(
+      (e) =>
+        e.status !== 'terminated' &&
+        (e.role === 'manager' || e.role === 'employee') &&
+        (!editing || e.department_id === editing.department_id || e.department_id == null)
+    )
+  }, [employees, editing])
 
   const createDept = useCreateDepartment()
   const updateDept = useUpdateDepartment()
@@ -107,12 +121,17 @@ export function DepartmentFormModal({
           <label className="mb-1 block text-sm font-medium">🧭 Department Manager</label>
           <select {...register('manager_id')} className={inputClass(false)}>
             <option value="">— None —</option>
-            {managers.map((m) => (
+            {eligibleManagers.map((m) => (
               <option key={m.employee_id} value={m.employee_id}>
                 {m.first_name} {m.last_name}
               </option>
             ))}
           </select>
+          {editing && eligibleManagers.length === 0 && (
+            <p className="mt-1 text-xs text-gray-400">
+              No one in this department (or unassigned) yet.
+            </p>
+          )}
         </div>
 
         {serverError && (

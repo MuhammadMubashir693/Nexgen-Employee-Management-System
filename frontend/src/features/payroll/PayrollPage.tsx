@@ -413,7 +413,7 @@ export function PayrollPage() {
                 <input
                   type="number"
                   min="1"
-                  step="100"
+                  step="any"
                   value={grossPay}
                   onChange={(e) => setGrossPay(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm dark:border-gray-700 dark:bg-gray-900"
@@ -428,7 +428,7 @@ export function PayrollPage() {
                   type="number"
                   min="0"
                   max="50"
-                  step="1"
+                  step="any"
                   value={deductionPercent}
                   onChange={(e) => setDeductionPercent(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm dark:border-gray-700 dark:bg-gray-900"
@@ -479,11 +479,10 @@ export function PayrollPage() {
               <button
                 type="submit"
                 disabled={!isFormValid || generatePayroll.isPending}
-                className={`rounded-lg px-5 py-2 text-sm font-medium text-white transition-all ${
-                  isFormValid
+                className={`rounded-lg px-5 py-2 text-sm font-medium text-white transition-all ${isFormValid
                     ? 'bg-primary hover:bg-primary-hover shadow-sm'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50 dark:bg-gray-800 dark:text-gray-500'
-                }`}
+                  }`}
               >
                 {generatePayroll.isPending ? '⏳ Processing…' : 'Generate Records'}
               </button>
