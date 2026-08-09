@@ -12,6 +12,35 @@ import { Modal } from '@/components/ui/Modal'
 import { pluralize } from '@/lib/utils'
 import type { Leave, LeaveWithRelations } from '@/types/database.types'
 
+// ── Constants ──────────────────────────────────────────────────────────────────
+
+const LEAVE_TYPES: { value: Leave['leave_type']; label: string; emoji: string }[] = [
+  { value: 'sick',    label: 'Sick Leave',    emoji: '🤒' },
+  { value: 'family',  label: 'Family Leave',  emoji: '👨‍👩‍👧' },
+  { value: 'wedding', label: 'Wedding Leave', emoji: '💍' },
+  { value: 'funeral', label: 'Funeral Leave', emoji: '🕊️' },
+  { value: 'casual',  label: 'Casual Leave',  emoji: '🏖️' },
+  { value: 'unpaid',  label: 'Unpaid Leave',  emoji: '💸' },
+  { value: 'annual',  label: 'Annual Leave',  emoji: '📅' },
+]
+
+const STATUSES = [
+  { value: 'pending',  label: 'Pending',  emoji: '⏳', color: 'text-amber-600' },
+  { value: 'approved', label: 'Approved', emoji: '✅', color: 'text-emerald-600' },
+  { value: 'rejected', label: 'Rejected', emoji: '❌', color: 'text-red-600' },
+]
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function calculateDays(start: string, end: string) {
+  const s = new Date(start)
+  const e = new Date(end)
+  const diffTime = Math.abs(e.getTime() - s.getTime())
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
+}
+
+// ── Component ──────────────────────────────────────────────────────────────────
+
 export function LeavesPage() {
   const { employee, role } = useAuth()
   const isAdmin = role === 'admin'
@@ -44,26 +73,39 @@ export function LeavesPage() {
   const [confirmReject, setConfirmReject] = useState<LeaveWithRelations | null>(null)
   const [confirmCancel, setConfirmCancel] = useState<LeaveWithRelations | null>(null)
 
-  // Filtered List
+  // ── Filtered List ────────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     if (!leaves) return []
     return leaves.filter((l) => {
-      const empName = l.employee ? `${l.employee.first_name} ${l.employee.last_name} ${l.employee.email}`.toLowerCase() : ''
+      const empName = l.employee
+        ? `${l.employee.first_name} ${l.employee.last_name} ${l.employee.email}`.toLowerCase()
+        : ''
       const matchesSearch = !search || empName.includes(search.toLowerCase())
-      const matchesDept = departmentFilter === 'all' || String(l.employee?.department_id) === departmentFilter
+      const matchesDept =
+        departmentFilter === 'all' || String(l.employee?.department_id) === departmentFilter
       const matchesStatus = statusFilter === 'all' || l.approval_status === statusFilter
       const matchesType = typeFilter === 'all' || l.leave_type === typeFilter
       return matchesSearch && matchesDept && matchesStatus && matchesType
     })
   }, [leaves, search, departmentFilter, statusFilter, typeFilter])
 
-  // Summary Metrics
-  const pendingCount = useMemo(() => leaves?.filter((l) => l.approval_status === 'pending').length ?? 0, [leaves])
-  const approvedCount = useMemo(() => leaves?.filter((l) => l.approval_status === 'approved').length ?? 0, [leaves])
-  const sickCount = useMemo(() => leaves?.filter((l) => l.leave_type === 'sick').length ?? 0, [leaves])
-  const annualCount = useMemo(() => leaves?.filter((l) => l.leave_type === 'annual' || l.leave_type === 'casual').length ?? 0, [leaves])
+  // ── Statistics — all leave types and all statuses ────────────────────────────
+  const stats = useMemo(() => {
+    const byType: Record<string, number> = {}
+    const byStatus: Record<string, number> = {}
 
-  // Live Input Validation Rules
+    LEAVE_TYPES.forEach(({ value }) => { byType[value] = 0 })
+    STATUSES.forEach(({ value }) => { byStatus[value] = 0 })
+
+    leaves?.forEach((l) => {
+      if (l.leave_type in byType) byType[l.leave_type]++
+      if (l.approval_status in byStatus) byStatus[l.approval_status]++
+    })
+
+    return { byType, byStatus, total: leaves?.length ?? 0 }
+  }, [leaves])
+
+  // ── Live Input Validation ────────────────────────────────────────────────────
   const dateError = useMemo(() => {
     if (!startDate || !endDate) return 'Start and End dates are required.'
     if (endDate < startDate) return 'End date cannot be earlier than start date.'
@@ -100,14 +142,6 @@ export function LeavesPage() {
     setModalOpen(false)
   }
 
-  function calculateDays(start: string, end: string) {
-    const s = new Date(start)
-    const e = new Date(end)
-    const diffTime = Math.abs(e.getTime() - s.getTime())
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
-    return diffDays
-  }
-
   return (
     <div className="space-y-6">
       {/* Header & Main Request Action */}
@@ -129,12 +163,59 @@ export function LeavesPage() {
         </button>
       </div>
 
-      {/* Summary Metrics */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard emoji="⏳" label="Pending Approvals" value={isLoading ? '…' : pendingCount} />
-        <StatCard emoji="✅" label="Approved Requests" value={isLoading ? '…' : approvedCount} />
-        <StatCard emoji="🤒" label="Sick Leaves" value={isLoading ? '…' : sickCount} />
-        <StatCard emoji="🏖️" label="Annual & Casual" value={isLoading ? '…' : annualCount} />
+      {/* ── Status Overview ────────────────────────────────────────────────── */}
+      <div>
+        <p className="text-xs font-semibold uppercase text-gray-400 mb-3 tracking-wide">
+          Status Overview
+        </p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatCard
+            emoji="📋"
+            label="Total Requests"
+            value={isLoading ? '…' : stats.total}
+            colorClass="border-gray-200 dark:border-gray-700"
+          />
+          {STATUSES.map(({ value, label, emoji, color }) => (
+            <StatCard
+              key={value}
+              emoji={emoji}
+              label={label}
+              value={isLoading ? '…' : stats.byStatus[value]}
+              colorClass={`border-gray-200 dark:border-gray-700`}
+              valueClass={color}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* ── Leave Type Breakdown ───────────────────────────────────────────── */}
+      <div>
+        <p className="text-xs font-semibold uppercase text-gray-400 mb-3 tracking-wide">
+          Leave Type Breakdown
+        </p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+          {LEAVE_TYPES.map(({ value, label, emoji }) => (
+            <TypeStatCard
+              key={value}
+              emoji={emoji}
+              label={label}
+              value={isLoading ? '…' : stats.byType[value]}
+              onClick={() => setTypeFilter(typeFilter === value ? 'all' : value)}
+              active={typeFilter === value}
+            />
+          ))}
+        </div>
+        {typeFilter !== 'all' && (
+          <p className="mt-2 text-xs text-primary font-medium">
+            Filtered by type:{' '}
+            <button
+              onClick={() => setTypeFilter('all')}
+              className="underline hover:no-underline"
+            >
+              clear filter ✕
+            </button>
+          </p>
+        )}
       </div>
 
       {/* Filter Bar */}
@@ -182,10 +263,11 @@ export function LeavesPage() {
             className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
           >
             <option value="all">All Leave Types</option>
-            <option value="sick">🤒 Sick</option>
-            <option value="casual">🏖️ Casual</option>
-            <option value="annual">📅 Annual</option>
-            <option value="unpaid">💸 Unpaid</option>
+            {LEAVE_TYPES.map(({ value, label, emoji }) => (
+              <option key={value} value={value}>
+                {emoji} {label}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -234,7 +316,9 @@ export function LeavesPage() {
                 >
                   <td className="px-4 py-3">
                     <div className="font-medium text-gray-900 dark:text-gray-100">
-                      {item.employee ? `${item.employee.first_name} ${item.employee.last_name}` : 'Unknown'}
+                      {item.employee
+                        ? `${item.employee.first_name} ${item.employee.last_name}`
+                        : 'Unknown'}
                     </div>
                     <div className="text-xs text-gray-400">{item.employee?.email}</div>
                   </td>
@@ -250,14 +334,19 @@ export function LeavesPage() {
                     </div>
                     <div className="text-xs text-gray-400">{pluralize(days, 'day')}</div>
                   </td>
-                  <td className="px-4 py-3 max-w-xs truncate text-gray-600 dark:text-gray-400" title={item.reason || ''}>
+                  <td
+                    className="px-4 py-3 max-w-xs truncate text-gray-600 dark:text-gray-400"
+                    title={item.reason || ''}
+                  >
                     {item.reason || '—'}
                   </td>
                   <td className="px-4 py-3">
                     <Badge value={item.approval_status} />
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500">
-                    {item.approver ? `${item.approver.first_name} ${item.approver.last_name}` : '—'}
+                    {item.approver
+                      ? `${item.approver.first_name} ${item.approver.last_name}`
+                      : '—'}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -308,10 +397,11 @@ export function LeavesPage() {
               className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm dark:border-gray-700 dark:bg-gray-900"
               required
             >
-              <option value="sick">🤒 Sick Leave</option>
-              <option value="casual">🏖️ Casual Leave</option>
-              <option value="annual">📅 Annual Leave</option>
-              <option value="unpaid">💸 Unpaid Leave</option>
+              {LEAVE_TYPES.map(({ value, label, emoji }) => (
+                <option key={value} value={value}>
+                  {emoji} {label}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -392,7 +482,11 @@ export function LeavesPage() {
           <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-surface-alt p-6 shadow-xl dark:border-gray-800">
             <h3 className="mb-2 text-lg font-semibold text-emerald-600">✅ Approve Leave Request?</h3>
             <p className="mb-4 text-sm text-gray-500">
-              Approve leave for <strong>{confirmApprove.employee?.first_name} {confirmApprove.employee?.last_name}</strong> from {confirmApprove.start_date} to {confirmApprove.end_date}?
+              Approve leave for{' '}
+              <strong>
+                {confirmApprove.employee?.first_name} {confirmApprove.employee?.last_name}
+              </strong>{' '}
+              from {confirmApprove.start_date} to {confirmApprove.end_date}?
             </p>
             <div className="flex justify-end gap-2">
               <button
@@ -425,7 +519,11 @@ export function LeavesPage() {
           <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-surface-alt p-6 shadow-xl dark:border-gray-800">
             <h3 className="mb-2 text-lg font-semibold text-red-600">❌ Reject Leave Request?</h3>
             <p className="mb-4 text-sm text-gray-500">
-              Reject leave request for <strong>{confirmReject.employee?.first_name} {confirmReject.employee?.last_name}</strong>?
+              Reject leave request for{' '}
+              <strong>
+                {confirmReject.employee?.first_name} {confirmReject.employee?.last_name}
+              </strong>
+              ?
             </p>
             <div className="flex justify-end gap-2">
               <button
@@ -485,12 +583,58 @@ export function LeavesPage() {
   )
 }
 
-function StatCard({ emoji, label, value }: { emoji: string; label: string; value: string | number }) {
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
+function StatCard({
+  emoji,
+  label,
+  value,
+  colorClass = '',
+  valueClass = 'text-gray-900 dark:text-gray-100',
+}: {
+  emoji: string
+  label: string
+  value: string | number
+  colorClass?: string
+  valueClass?: string
+}) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-surface-alt p-5 dark:border-gray-800">
-      <div className="mb-2 text-2xl">{emoji}</div>
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-gray-100">{value}</p>
+    <div className={`rounded-2xl border bg-surface-alt p-4 dark:border-gray-800 ${colorClass}`}>
+      <div className="mb-1 text-xl">{emoji}</div>
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className={`mt-0.5 text-2xl font-semibold ${valueClass}`}>{value}</p>
     </div>
+  )
+}
+
+function TypeStatCard({
+  emoji,
+  label,
+  value,
+  active,
+  onClick,
+}: {
+  emoji: string
+  label: string
+  value: string | number
+  active: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-xl border p-3 text-left transition-all ${
+        active
+          ? 'border-primary bg-primary/10 ring-2 ring-primary/30'
+          : 'border-gray-200 bg-surface-alt hover:border-primary/40 hover:bg-primary/5 dark:border-gray-800'
+      }`}
+    >
+      <div className="text-lg">{emoji}</div>
+      <p className={`mt-1 text-xl font-bold ${active ? 'text-primary' : 'text-gray-900 dark:text-gray-100'}`}>
+        {value}
+      </p>
+      <p className="text-xs text-gray-500 leading-tight mt-0.5">{label.replace(' Leave', '')}</p>
+    </button>
   )
 }

@@ -16,6 +16,7 @@ export interface Employee {
   job_title: string | null
   status: 'active' | 'on_leave' | 'terminated'
   role: UserRole
+  avatar_url: string | null
   created_at: string
 }
 
@@ -57,7 +58,7 @@ export interface Attendance {
 export interface Leave {
   leave_id: number
   employee_id: number
-  leave_type: 'sick' | 'casual' | 'annual' | 'unpaid'
+  leave_type: 'sick' | 'family' | 'wedding' | 'funeral' | 'casual' | 'unpaid' | 'annual'
   start_date: string
   end_date: string
   reason: string | null
