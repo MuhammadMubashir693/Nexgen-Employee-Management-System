@@ -9,6 +9,7 @@ import {
 import { useDepartments } from '@/lib/queries/useDepartments'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
+import { pluralize } from '@/lib/utils'
 import type { Leave, LeaveWithRelations } from '@/types/database.types'
 
 export function LeavesPage() {
@@ -247,7 +248,7 @@ export function LeavesPage() {
                     <div className="font-mono text-xs text-gray-700 dark:text-gray-300">
                       {item.start_date} → {item.end_date}
                     </div>
-                    <div className="text-xs text-gray-400">{days} day(s)</div>
+                    <div className="text-xs text-gray-400">{pluralize(days, 'day')}</div>
                   </td>
                   <td className="px-4 py-3 max-w-xs truncate text-gray-600 dark:text-gray-400" title={item.reason || ''}>
                     {item.reason || '—'}

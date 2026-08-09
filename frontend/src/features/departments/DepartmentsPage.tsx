@@ -4,6 +4,7 @@ import { useDepartments } from '@/lib/queries/useDepartments'
 import { useEmployees } from '@/lib/queries/useEmployees'
 import { useDeleteDepartment } from '@/lib/queries/useDepartmentMutations'
 import { DepartmentFormModal } from './DepartmentFormModal'
+import { pluralize } from '@/lib/utils'
 import type { Department } from '@/types/database.types'
 
 export function DepartmentsPage() {
@@ -81,7 +82,7 @@ export function DepartmentsPage() {
             </div>
             <div className="space-y-1 text-sm text-gray-500">
               <p>🧭 Manager: {managerName(dept.manager_id)}</p>
-              <p>👥 {employeeCount(dept.department_id)} employees</p>
+              <p>👥 {pluralize(employeeCount(dept.department_id), 'employee')}</p>
             </div>
           </div>
         ))}
