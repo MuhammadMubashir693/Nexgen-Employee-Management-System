@@ -114,8 +114,8 @@ export function EmployeesPage() {
             className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
           >
             <option value="all">All Genders</option>
-            <option value="M">👨</option>
-            <option value="F">👩</option>
+            <option value="M">♂️ Male</option>
+            <option value="F">♀️ Female</option>
           </select>
         </div>
 
