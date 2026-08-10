@@ -19,12 +19,25 @@ export function AttendancePage() {
   const isManager = role === 'manager'
   const canManage = isAdmin || isManager
 
+  // Managers may only manage attendance for employees in their own department.
+  const managerDepartmentId = isManager ? employee?.department_id : null
+
   const todayStr = new Date().toISOString().split('T')[0]
 
   const { data: todayRecord, isLoading: loadingToday } = useTodayAttendance(employee?.employee_id)
   const { data: attendanceList, isLoading } = useAttendance()
   const { data: employees } = useEmployees()
   const { data: departments } = useDepartments()
+
+  // Restrict the employee list available to managers to their own department.
+  const manageableEmployees = useMemo(() => {
+    if (!employees) return []
+    if (!isManager || managerDepartmentId == null) return employees
+
+    return employees.filter(
+      (emp) => emp.department_id === managerDepartmentId
+    )
+  }, [employees, isManager, managerDepartmentId])
 
   const checkIn = useCheckIn()
   const checkOut = useCheckOut()
@@ -48,15 +61,42 @@ export function AttendancePage() {
   // Filtered List
   const filtered = useMemo(() => {
     if (!attendanceList) return []
+
     return attendanceList.filter((row) => {
-      const empName = row.employee ? `${row.employee.first_name} ${row.employee.last_name} ${row.employee.email}`.toLowerCase() : ''
+      // Managers can only see/manage attendance belonging to their department.
+      if (
+        isManager &&
+        (managerDepartmentId == null ||
+          row.employee?.department_id !== managerDepartmentId)
+      ) {
+        return false
+      }
+
+      const empName = row.employee
+        ? `${row.employee.first_name} ${row.employee.last_name} ${row.employee.email}`.toLowerCase()
+        : ''
       const matchesSearch = !search || empName.includes(search.toLowerCase())
-      const matchesDept = departmentFilter === 'all' || String(row.employee?.department_id) === departmentFilter
+
+      const matchesDept =
+        isManager
+          ? row.employee?.department_id === managerDepartmentId
+          : departmentFilter === 'all' ||
+          String(row.employee?.department_id) === departmentFilter
+
       const matchesStatus = statusFilter === 'all' || row.status === statusFilter
       const matchesDate = !dateFilter || row.attendance_date === dateFilter
+
       return matchesSearch && matchesDept && matchesStatus && matchesDate
     })
-  }, [attendanceList, search, departmentFilter, statusFilter, dateFilter])
+  }, [
+    attendanceList,
+    search,
+    departmentFilter,
+    statusFilter,
+    dateFilter,
+    isManager,
+    managerDepartmentId,
+  ])
 
   // Summary Metrics
   const presentToday = useMemo(() => {
@@ -102,6 +142,21 @@ export function AttendancePage() {
   async function handleSaveAttendance(e: React.FormEvent) {
     e.preventDefault()
     if (!isModalValid) return
+
+    // Never allow a manager to submit attendance for another department,
+    // even if the employee ID is manually manipulated in the browser.
+    if (isManager && managerDepartmentId != null) {
+      const selectedEmployee = manageableEmployees.find(
+        (emp) => emp.employee_id === Number(modalEmpId)
+      )
+
+      if (
+        !selectedEmployee ||
+        selectedEmployee.department_id !== managerDepartmentId
+      ) {
+        return
+      }
+    }
 
     await recordAttendance.mutateAsync({
       attendance_id: editingItem?.attendance_id,
@@ -194,16 +249,33 @@ export function AttendancePage() {
           </div>
 
           <select
-            value={departmentFilter}
+            value={
+              isManager && managerDepartmentId != null
+                ? String(managerDepartmentId)
+                : departmentFilter
+            }
             onChange={(e) => setDepartmentFilter(e.target.value)}
-            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+            disabled={isManager}
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-700 dark:bg-gray-900"
           >
-            <option value="all">🏢 All Departments</option>
-            {departments?.map((d) => (
-              <option key={d.department_id} value={d.department_id}>
-                {d.name}
-              </option>
-            ))}
+            {isManager ? (
+              departments
+                ?.filter((d) => d.department_id === managerDepartmentId)
+                .map((d) => (
+                  <option key={d.department_id} value={d.department_id}>
+                    🏢 {d.name}
+                  </option>
+                ))
+            ) : (
+              <>
+                <option value="all">🏢 All Departments</option>
+                {departments?.map((d) => (
+                  <option key={d.department_id} value={d.department_id}>
+                    {d.name}
+                  </option>
+                ))}
+              </>
+            )}
           </select>
 
           <select
@@ -337,7 +409,7 @@ export function AttendancePage() {
                 required
               >
                 <option value="">Select Employee</option>
-                {employees?.map((emp) => (
+                {manageableEmployees.map((emp) => (
                   <option key={emp.employee_id} value={emp.employee_id}>
                     {emp.first_name} {emp.last_name} ({emp.email})
                   </option>
@@ -416,11 +488,10 @@ export function AttendancePage() {
               <button
                 type="submit"
                 disabled={!isModalValid || recordAttendance.isPending}
-                className={`rounded-lg px-5 py-2 text-sm font-medium text-white transition-all ${
-                  isModalValid
+                className={`rounded-lg px-5 py-2 text-sm font-medium text-white transition-all ${isModalValid
                     ? 'bg-primary hover:bg-primary-hover'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50 dark:bg-gray-800 dark:text-gray-500'
-                }`}
+                  }`}
               >
                 {recordAttendance.isPending ? '⏳ Saving…' : 'Save Record'}
               </button>
