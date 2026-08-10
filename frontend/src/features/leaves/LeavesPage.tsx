@@ -283,7 +283,7 @@ export function LeavesPage() {
               <th className="px-4 py-3 font-medium">Duration</th>
               <th className="px-4 py-3 font-medium">Reason</th>
               <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Approved By</th>
+              <th className="px-4 py-3 font-medium">Reviewed By</th>
               <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
