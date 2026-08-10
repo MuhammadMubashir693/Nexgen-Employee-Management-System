@@ -38,7 +38,7 @@ export function DepartmentFormModal({
     return employees.filter(
       (e) =>
         e.status !== 'terminated' &&
-        (e.role === 'manager' || e.role === 'employee') &&
+        (e.role === 'manager') &&
         (!editing || e.department_id === editing.department_id || e.department_id == null)
     )
   }, [employees, editing])
