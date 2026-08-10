@@ -24,6 +24,7 @@ export interface Department {
   department_id: number
   name: string
   location: string | null
+  budget: number | null
   manager_id: number | null
 }
 

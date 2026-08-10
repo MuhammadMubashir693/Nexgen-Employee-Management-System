@@ -10,6 +10,18 @@ import type { Department } from '@/types/database.types'
 const schema = z.object({
   name: z.string().min(2, 'Department name must be at least 2 characters'),
   location: z.string().min(1, 'Location is required'),
+  budget: z.preprocess(
+    (val) => {
+      if (val === '' || val === undefined || val === null) return undefined;
+      const num = parseFloat(val as string);
+      return isNaN(num) ? undefined : num;
+    },
+    z.number()
+      .min(0, 'Budget must be 0 or greater')
+      .max(999999999.99, 'Budget is too large')
+      .optional()
+      .transform(val => val ?? 0)
+  ),
   manager_id: z.preprocess(
     (val) => (val === '' || val === undefined || val === null || val === '0' || Number.isNaN(Number(val)) ? null : Number(val)),
     z.number().nullable().optional()
@@ -55,8 +67,11 @@ export function DepartmentFormModal({
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     mode: 'onChange',
+    defaultValues: {
+      budget: 0
+    }
   })
-
+  
   // Re-populate the form whenever a different department is opened for
   // editing (or the modal is opened fresh for "Add"). defaultValues alone
   // won't do this since the modal component stays mounted between opens.
@@ -64,8 +79,13 @@ export function DepartmentFormModal({
     if (open) {
       reset(
         editing
-          ? { name: editing.name, location: editing.location ?? '', manager_id: editing.manager_id ?? null }
-          : { name: '', location: '', manager_id: null }
+          ? {
+            name: editing.name,
+            location: editing.location ?? '',
+            budget: editing.budget ?? 0,
+            manager_id: editing.manager_id ?? null
+          }
+          : { name: '', location: '', budget: 0, manager_id: null }
       )
     }
   }, [open, editing, reset])
@@ -75,6 +95,7 @@ export function DepartmentFormModal({
     const payload = {
       name: values.name,
       location: values.location,
+      budget: values.budget ?? 0,
       manager_id: values.manager_id ?? null,
     }
     try {
@@ -92,12 +113,12 @@ export function DepartmentFormModal({
 
   const busy = createDept.isPending || updateDept.isPending
 
-  function inputClass(hasError: boolean) {
-    return `w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${
-      hasError
+  function inputClass(hasError: boolean, hasPrefix?: boolean) {
+    return `w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors ${hasPrefix ? 'pl-8' : ''
+      } ${hasError
         ? 'border-red-400 bg-red-50 text-gray-400 dark:bg-red-950/30'
         : 'border-gray-300 bg-white focus:border-primary dark:border-gray-700 dark:bg-gray-900'
-    }`
+      }`
   }
 
   return (
@@ -114,6 +135,24 @@ export function DepartmentFormModal({
           <input {...register('location')} className={inputClass(!!errors.location)} />
           {errors.location && (
             <p className="mt-1 text-xs text-red-500">{errors.location.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">💰 Budget</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+            <input
+              {...register('budget')}
+              type="number"
+              step="0.01"
+              min="0"
+              className={inputClass(!!errors.budget, true)}
+              placeholder="0.00"
+            />
+          </div>
+          {errors.budget && (
+            <p className="mt-1 text-xs text-red-500">{errors.budget.message}</p>
           )}
         </div>
 

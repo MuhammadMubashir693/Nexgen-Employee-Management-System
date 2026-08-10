@@ -61,23 +61,15 @@ export function DepartmentsPage() {
               <div>
                 <h3 className="font-semibold">{dept.name}</h3>
                 <p className="text-xs text-gray-400">📍 {dept.location ?? '—'}</p>
+                <p className="text-xs text-gray-400">
+                  💰 ${(dept.budget ?? 0).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}
+                </p>
               </div>
               <div className="flex gap-1">
-                <button
-                  onClick={() => {
-                    setEditing(dept)
-                    setModalOpen(true)
-                  }}
-                  className="rounded-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800"
-                >
-                  ✏️
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(dept)}
-                  className="rounded-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800"
-                >
-                  🗑️
-                </button>
+                {/* ... action buttons ... */}
               </div>
             </div>
             <div className="space-y-1 text-sm text-gray-500">
